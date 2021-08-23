@@ -19,6 +19,7 @@ from ._internal_utils import (
     _config_utils,
     _request_utils,
     _utils,
+    connection,
 )
 
 from .tracking import _Context
@@ -141,7 +142,7 @@ class Client(object):
         if host is None:
             raise ValueError("`host` must be provided")
         auth = extra_auth_headers.copy()
-        auth.update({_utils._GRPC_PREFIX+'source': "PythonClient"})
+        auth.update({connection._GRPC_PREFIX+'source': "PythonClient"})
         if email is None and dev_key is None:
             if debug:
                 print("[DEBUG] email and developer key not found; auth disabled")
@@ -150,11 +151,11 @@ class Client(object):
                 print("[DEBUG] using email: {}".format(email))
                 print("[DEBUG] using developer key: {}".format(dev_key[:8] + re.sub(r"[^-]", '*', dev_key[8:])))
             auth.update({
-                _utils._GRPC_PREFIX+'email': email,
-                _utils._GRPC_PREFIX+'developer_key': dev_key,
+                connection._GRPC_PREFIX+'email': email,
+                connection._GRPC_PREFIX+'developer_key': dev_key,
                 # without underscore, for NGINX support
                 # https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls#missing-disappearing-http-headers
-                _utils._GRPC_PREFIX+'developer-key': dev_key,
+                connection._GRPC_PREFIX+'developer-key': dev_key,
             })
             # save credentials to env for other Verta Client features
             os.environ['VERTA_EMAIL'] = email
@@ -170,10 +171,10 @@ class Client(object):
                           category=FutureWarning)
             socket = "{}:{}".format(socket, port)
         scheme = back_end_url.scheme or ("https" if ".verta.ai" in socket else "http")
-        auth[_utils._GRPC_PREFIX+'scheme'] = scheme
+        auth[connection._GRPC_PREFIX+'scheme'] = scheme
 
         # verify connection
-        conn = _utils.Connection(scheme, socket, auth, max_retries, ignore_conn_err)
+        conn = connection.Connection(scheme, socket, auth, max_retries, ignore_conn_err)
         if _connect:
             try:
                 response = _utils.make_request("GET",

@@ -11,7 +11,7 @@ import requests
 from ..external import six
 from ..external.six.moves.urllib.parse import urljoin, urlparse  # pylint: disable=import-error, no-name-in-module
 
-from .._internal_utils import _utils
+from .._internal_utils import _utils, connection
 
 # NOTE: DeployedModel's mechanism for making requests is independent from the
 # rest of the client; Client's Connection deliberately instantiates a new
@@ -74,15 +74,15 @@ class DeployedModel:
 
         self._session = requests.Session()
         if not _from_url:
-            self._session.headers.update({_utils._GRPC_PREFIX+'source': "PythonClient"})
+            self._session.headers.update({connection._GRPC_PREFIX+'source': "PythonClient"})
             try:
-                self._session.headers.update({_utils._GRPC_PREFIX+'email': os.environ['VERTA_EMAIL']})
+                self._session.headers.update({connection._GRPC_PREFIX+'email': os.environ['VERTA_EMAIL']})
             except KeyError:
                 six.raise_from(EnvironmentError("${} not found in environment".format('VERTA_EMAIL')), None)
             try:
                 self._session.headers.update({
-                    _utils._GRPC_PREFIX+'developer_key': os.environ['VERTA_DEV_KEY'],
-                    _utils._GRPC_PREFIX+'developer-key': os.environ['VERTA_DEV_KEY'],  # see Client.__init__()
+                    connection._GRPC_PREFIX+'developer_key': os.environ['VERTA_DEV_KEY'],
+                    connection._GRPC_PREFIX+'developer-key': os.environ['VERTA_DEV_KEY'],  # see Client.__init__()
                 })
             except KeyError:
                 six.raise_from(EnvironmentError("${} not found in environment".format('VERTA_DEV_KEY')), None)
