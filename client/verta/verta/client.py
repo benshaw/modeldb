@@ -22,6 +22,8 @@ from ._internal_utils import (
     connection,
 )
 
+from . import local
+
 from .tracking import _Context
 from .tracking.entities import (
     Project,
@@ -244,6 +246,10 @@ class Client(object):
     @debug.setter
     def debug(self, value):
         self._conf.debug = value
+
+    @property
+    def local(self):
+        return local.Client(self._conn)
 
     @property
     def monitoring(self):
