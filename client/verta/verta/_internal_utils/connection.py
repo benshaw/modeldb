@@ -1,12 +1,25 @@
 # -*- coding: utf-8 -*-
 
+import logging
+import os
+import re
+
+import requests
 from urllib3.util.retry import Retry
+
+from verta.external.six.moves.urllib.parse import urlparse  # pylint: disable=import-error, no-name-in-module
 
 from verta._protos.public.uac import Organization_pb2, UACService_pb2, Workspace_pb2
 
-from verta._internal_utils import _utils
+from . import _utils
 
 
+logger = logging.getLogger(__name__)
+
+
+_VERTA_HOST_ENV_VAR = "VERTA_HOST"
+_VERTA_EMAIL_ENV_VAR = "VERTA_EMAIL"
+_VERTA_DEV_KEY_ENV_VAR = "VERTA_DEV_KEY"
 _GRPC_PREFIX = "Grpc-Metadata-"
 
 
@@ -52,6 +65,68 @@ class Connection:
             raise_on_status=False,  # return Response instead of raising after max retries
         )
         self.ignore_conn_err = ignore_conn_err
+
+    @classmethod
+    def from_env(cls, verify_connection=True):
+        # TODO: consolidate with Client.__init__()
+        # TODO: reconcile config file
+        verta_url = urlparse(os.environ[_VERTA_HOST_ENV_VAR])
+        logger.info("set host from environment")
+        socket = verta_url.netloc + verta_url.path.rstrip('/')
+        scheme = verta_url.scheme or ("https" if ".verta.ai" in socket else "http")
+        logger.debug("using Verta URL: %s://%s/", scheme, socket)
+
+        auth = {
+            _GRPC_PREFIX + "source": "PythonClient",
+            _GRPC_PREFIX + "scheme": scheme,
+        }
+        email = os.environ.get(_VERTA_EMAIL_ENV_VAR)
+        if email:
+            auth[_GRPC_PREFIX + "email"] = email
+            logger.info("set email from environment")
+            logger.debug("using email: %s", email)
+        dev_key = os.environ.get(_VERTA_DEV_KEY_ENV_VAR)
+        if dev_key:
+            auth[_GRPC_PREFIX + "developer-key"] = dev_key
+            logger.info("set developer key from environment")
+            logger.debug(
+                "using developer key: %s",
+                dev_key[:8] + re.sub(r"[^-]", '*', dev_key[8:]),
+            )
+
+        conn = cls(scheme, socket, auth)
+        if verify_connection:
+            conn.verify_connection()
+        return conn
+
+    def verify_connection(self):
+        # TODO: call this in Client.__init__()
+        url = "{}://{}/api/v1/modeldb/project/verifyConnection".format(
+            self.scheme,
+            self.socket,
+        )
+        try:
+            response = _utils.make_request("GET", url, self)
+        except requests.ConnectionError as e:
+            e_msg = (
+                "connection failed; please check `host` and `port`\n\n"
+                + e.args[0]
+            )
+            e.args = (e_msg,) + e.args[1:]
+            raise e
+
+        try:
+            self.must_response(response)
+        except requests.HTTPError as e:
+            if e.response.status_code == 401:
+                e_msg = (
+                    "authentication failed; please check `VERTA_EMAIL` and `VERTA_DEV_KEY`\n\n"
+                    + e.args[0]
+                )
+                e.args = (e_msg,) + e.args[1:]
+            raise e
+
+        logger.info("connection successfully established")
 
     def make_proto_request(
         self,

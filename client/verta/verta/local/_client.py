@@ -2,6 +2,8 @@
 
 import functools
 
+from verta._internal_utils import connection
+
 from . import tracking
 
 
@@ -27,7 +29,7 @@ def new_entity(f):
 
 class Client(object):
     def __init__(self, conn=None):
-        self._conn = conn
+        self._conn = conn or connection.Connection.from_env()
 
     @new_entity
     def new_project(self, *args, **kwargs):

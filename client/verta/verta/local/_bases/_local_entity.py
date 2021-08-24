@@ -4,11 +4,13 @@ import abc
 
 from verta.external import six
 
+from verta._internal_utils import connection
+
 
 @six.add_metaclass(abc.ABCMeta)
 class _LocalEntity(object):
     def __init__(self, conn=None):
-        self._conn = conn
+        self._conn = conn or connection.Connection.from_env()
         self._msg = None
 
     def __enter__(self):
