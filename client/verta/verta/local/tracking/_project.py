@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin):
     def __init__(self, conn=None, workspace=None, name=None):
         super(LocalProject, self).__init__(conn=conn)
+
         self._msg = ProjectService_pb2.Project(name=name)
         self._workspace = workspace
 
