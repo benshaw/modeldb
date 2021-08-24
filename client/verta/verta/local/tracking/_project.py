@@ -2,17 +2,16 @@
 
 import logging
 
-from verta._protos.public.common import CommonService_pb2
 from verta._protos.public.modeldb import ProjectService_pb2
 
 from verta._internal_utils import _utils
-from verta.local import _bases
+from verta.local import _bases, _mixins
 
 
 logger = logging.getLogger(__name__)
 
 
-class LocalProject(_bases._LocalEntity):
+class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin):
     def __init__(self, conn=None, workspace=None, name=None):
         super(LocalProject, self).__init__(conn=conn)
         self._msg = ProjectService_pb2.Project(name=name)
@@ -44,18 +43,6 @@ class LocalProject(_bases._LocalEntity):
             return self._workspace
         else:
             return self._conn.get_default_workspace()
-
-    def add_attribute(self, key, value):
-        self.add_attributes({key: value})
-
-    def add_attributes(self, attributes):
-        for key in attributes.keys():
-            _utils.validate_flat_key(key)
-
-        for key, value in attributes.items():
-            val_msg = _utils.python_to_val_proto(value, allow_collection=True)
-            attr_msg = CommonService_pb2.KeyValue(key=key, value=val_msg)
-            self._msg.attributes.append(attr_msg)
 
     def save(self):
         endpoint = "/api/v1/modeldb/project/createProject"
