@@ -4,10 +4,11 @@
 
 from verta._internal_utils import documentation
 
+from ._local_artifact_entity import _LocalArtifactEntity
 from ._local_entity import _LocalEntity
 
 
 documentation.reassign_module(
-    [_LocalEntity],
+    [_LocalArtifactEntity, _LocalEntity],
     module_name=__name__,
 )
