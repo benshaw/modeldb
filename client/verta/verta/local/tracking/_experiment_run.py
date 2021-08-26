@@ -22,7 +22,7 @@ class LocalExperimentRun(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._Loc
 
         if experiment_name is None:
             expt = _experiment.LocalExperiment(
-                conn=conn,
+                conn=self._conn,
                 project_name=project_name,
                 workspace=workspace,
             )

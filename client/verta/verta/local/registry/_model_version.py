@@ -19,7 +19,7 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
 
         if registered_model_name is None:
             reg_model = _registered_model.LocalRegisteredModel(
-                conn=conn,
+                conn=self._conn,
                 workspace=workspace,
             )
             reg_model.save()

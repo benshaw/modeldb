@@ -18,7 +18,7 @@ class LocalExperiment(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalE
         super(LocalExperiment, self).__init__(conn=conn)
 
         if project_name is None:
-            proj = _project.LocalProject(conn=conn, workspace=workspace)
+            proj = _project.LocalProject(conn=self._conn, workspace=workspace)
             proj.save()
         else:
             raise NotImplementedError("TODO: fetch existing proj")
