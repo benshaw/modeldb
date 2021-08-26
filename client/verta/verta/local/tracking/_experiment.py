@@ -49,12 +49,7 @@ class LocalExperiment(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalE
 
         return "\n    ".join(lines)
 
-    @property
-    def workspace(self):
-        raise NotImplementedError("TODO: fetch existing proj")
-        return proj.workspace
-
-    def save(self):
+    def _create(self):
         endpoint = "/api/v1/modeldb/experiment/createExperiment"
         body = ExperimentService_pb2.CreateExperiment(
             project_id=self._msg.project_id,
@@ -65,6 +60,14 @@ class LocalExperiment(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalE
         response = self._conn.make_proto_request("POST", endpoint, body=body)
         self._msg = self._conn.must_proto_response(response, body.Response).experiment
         logger.info(
-            'saved experiment "%s"',
+            'created experiment "%s"',
             self._msg.name,
         )
+
+    def _update(self):
+        raise NotImplementedError
+
+    @property
+    def workspace(self):
+        raise NotImplementedError("TODO: fetch existing proj")
+        return proj.workspace

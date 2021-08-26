@@ -63,15 +63,7 @@ class LocalExperimentRun(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._Loc
 
         return "\n    ".join(lines)
 
-    @property
-    def workspace(self):
-        raise NotImplementedError("TODO: fetch existing proj")
-        return proj.workspace
-
-    def _get_artifact_resolver(self, key):
-        return _ExperimentRunArtifactResolver(self._conn, self.id, key)
-
-    def save(self):
+    def _create(self):
         endpoint = "/api/v1/modeldb/experiment-run/createExperimentRun"
         body = ExperimentRunService_pb2.CreateExperimentRun(
             project_id=self._msg.project_id,
@@ -84,11 +76,20 @@ class LocalExperimentRun(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._Loc
         response = self._conn.make_proto_request("POST", endpoint, body=body)
         self._msg = self._conn.must_proto_response(response, body.Response).experiment_run
         logger.info(
-            'saved experiment run "%s"',
+            'created experiment run "%s"',
             self._msg.name,
         )
 
-        self._upload_pending_artifacts()
+    def _update(self):
+        raise NotImplementedError
+
+    @property
+    def workspace(self):
+        raise NotImplementedError("TODO: fetch existing proj")
+        return proj.workspace
+
+    def _get_artifact_resolver(self, key):
+        return _ExperimentRunArtifactResolver(self._conn, self.id, key)
 
 
 class _ExperimentRunArtifactResolver(artifact_manager.ArtifactResolver):

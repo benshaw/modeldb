@@ -52,15 +52,7 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
 
         return "\n    ".join(lines)
 
-    @property
-    def workspace(self):
-        raise NotImplementedError("TODO: fetch existing reg model")
-        return reg_model.workspace
-
-    def _get_artifact_resolver(self, key):
-        return _ModelVersionArtifactResolver(self._conn, self.id, key)
-
-    def save(self):
+    def _create(self):
         endpoint = "/api/v1/registry/registered_models/{}/model_versions".format(
             self._msg.registered_model_id,
         )
@@ -70,11 +62,32 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
             RegistryService_pb2.SetModelVersion.Response,
         ).model_version
         logger.info(
-            'saved model version "%s"',
+            'created model version "%s"',
             self._msg.version,
         )
 
-        self._upload_pending_artifacts()
+    def _update(self):
+        endpoint = "/api/v1/registry/registered_models/{}/model_versions/{}".format(
+            self._msg.registered_model_id,
+            self.id,
+        )
+        response = self._conn.make_proto_request("PUT", endpoint, body=self._msg)
+        self._msg = self._conn.must_proto_response(
+            response,
+            RegistryService_pb2.SetModelVersion.Response,
+        ).model_version
+        logger.info(
+            'updated model version "%s"',
+            self._msg.version,
+        )
+
+    @property
+    def workspace(self):
+        raise NotImplementedError("TODO: fetch existing reg model")
+        return reg_model.workspace
+
+    def _get_artifact_resolver(self, key):
+        return _ModelVersionArtifactResolver(self._conn, self.id, key)
 
 
 class _ModelVersionArtifactResolver(artifact_manager.ArtifactResolver):

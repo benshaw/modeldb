@@ -34,6 +34,36 @@ class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
 
         return "\n    ".join(lines)
 
+    def _create(self):
+        endpoint = "/api/v1/registry/workspaces/{}/registered_models".format(
+            self.workspace,
+        )
+        response = self._conn.make_proto_request("POST", endpoint, body=self._msg)
+        self._msg = self._conn.must_proto_response(
+            response,
+            RegistryService_pb2.SetRegisteredModel.Response,
+        ).registered_model
+        logger.info(
+            'created registered model "%s" in workspace "%s"',
+            self._msg.name,
+            self.workspace,
+        )
+
+    def _update(self):
+        endpoint = "/api/v1/registry/registered_models/{}".format(
+            self.id,
+        )
+        response = self._conn.make_proto_request("PUT", endpoint, body=self._msg)
+        self._msg = self._conn.must_proto_response(
+            response,
+            RegistryService_pb2.SetRegisteredModel.Response,
+        ).registered_model
+        logger.info(
+            'updated registered model "%s" in workspace "%s"',
+            self._msg.name,
+            self.workspace,
+        )
+
     @property
     def workspace(self):
         if self._msg.workspace_id:
@@ -44,18 +74,3 @@ class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
             return self._workspace
         else:
             return self._conn.get_default_workspace()
-
-    def save(self):
-        endpoint = "/api/v1/registry/workspaces/{}/registered_models".format(
-            self.workspace,
-        )
-        response = self._conn.make_proto_request("POST", endpoint, body=self._msg)
-        self._msg = self._conn.must_proto_response(
-            response,
-            RegistryService_pb2.SetRegisteredModel.Response,
-        ).registered_model
-        logger.info(
-            'saved registered model "%s" to workspace "%s"',
-            self._msg.name,
-            self.workspace,
-        )

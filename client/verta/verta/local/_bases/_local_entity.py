@@ -24,6 +24,14 @@ class _LocalEntity(object):
     def __repr__(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def _create(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _update(self):
+        raise NotImplementedError
+
     @property
     def id(self):
         return self._msg.id
@@ -32,6 +40,8 @@ class _LocalEntity(object):
     def workspace(self):
         raise NotImplementedError
 
-    @abc.abstractmethod
     def save(self):
-        raise NotImplementedError
+        if self.id:
+            self._update()
+        else:
+            self._create()

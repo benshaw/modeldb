@@ -39,18 +39,7 @@ class LocalProject(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalEnti
 
         return "\n    ".join(lines)
 
-    @property
-    def workspace(self):
-        if self._msg.workspace_id:
-            return self._conn.get_workspace_name_from_legacy_id(
-                self._msg.workspace_id,
-            )
-        elif self._workspace:
-            return self._workspace
-        else:
-            return self._conn.get_default_workspace()
-
-    def save(self):
+    def _create(self):
         endpoint = "/api/v1/modeldb/project/createProject"
         body = ProjectService_pb2.CreateProject(
             name=self._msg.name,
@@ -61,7 +50,21 @@ class LocalProject(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalEnti
         response = self._conn.make_proto_request("POST", endpoint, body=body)
         self._msg = self._conn.must_proto_response(response, body.Response).project
         logger.info(
-            'saved project "%s" to workspace "%s"',
+            'created project "%s" in workspace "%s"',
             self._msg.name,
             self.workspace,
         )
+
+    def _update(self):
+        raise NotImplementedError
+
+    @property
+    def workspace(self):
+        if self._msg.workspace_id:
+            return self._conn.get_workspace_name_from_legacy_id(
+                self._msg.workspace_id,
+            )
+        elif self._workspace:
+            return self._workspace
+        else:
+            return self._conn.get_default_workspace()

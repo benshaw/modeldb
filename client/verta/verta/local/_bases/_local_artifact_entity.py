@@ -42,7 +42,6 @@ class _LocalArtifactEntity(_local_entity._LocalEntity):
             with open(pending_artifact.filepath, "rb") as f:
                 manager.upload(f)
             os.remove(pending_artifact.filepath)
-        del self._pending_artifacts[:]
 
     def _build_artifact_store_path(self, artifact_filepath, key, ext):
         # calculate checksum
@@ -110,6 +109,12 @@ class _LocalArtifactEntity(_local_entity._LocalEntity):
 
     def get_artifact_keys(self):
         return sorted(artifact.key for artifact in self._msg.artifacts)
+
+    def save(self):
+        super(_LocalArtifactEntity, self).save()
+
+        self._upload_pending_artifacts()
+        del self._pending_artifacts[:]
 
 
 class _PendingArtifact(object):
