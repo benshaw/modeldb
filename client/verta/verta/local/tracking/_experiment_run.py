@@ -16,7 +16,7 @@ from . import _experiment
 logger = logging.getLogger(__name__)
 
 
-class LocalExperimentRun(_bases._LocalArtifactEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
+class LocalExperimentRun(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalArtifactEntity):
     def __init__(self, conn=None, project_name=None, experiment_name=None, workspace=None, name=None):
         super(LocalExperimentRun, self).__init__(conn=conn)
 

@@ -13,7 +13,7 @@ from . import _project
 logger = logging.getLogger(__name__)
 
 
-class LocalExperiment(_bases._LocalEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
+class LocalExperiment(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalEntity):
     def __init__(self, conn=None, project_name=None, workspace=None, name=None):
         super(LocalExperiment, self).__init__(conn=conn)
 

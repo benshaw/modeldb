@@ -13,7 +13,7 @@ from . import _registered_model
 logger = logging.getLogger(__name__)
 
 
-class LocalModelVersion(_bases._LocalArtifactEntity, _mixins.AttributesMixin):
+class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
     def __init__(self, conn=None, registered_model_name=None, workspace=None, version=None):
         super(LocalModelVersion, self).__init__(conn=conn)
 

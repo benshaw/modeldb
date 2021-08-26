@@ -11,7 +11,7 @@ from verta.local import _bases, _mixins
 logger = logging.getLogger(__name__)
 
 
-class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
+class LocalProject(_mixins.AttributesMixin, _mixins.TagsMixin, _bases._LocalEntity):
     def __init__(self, conn=None, workspace=None, name=None):
         super(LocalProject, self).__init__(conn=conn)
 
