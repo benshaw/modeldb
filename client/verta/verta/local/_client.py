@@ -4,7 +4,7 @@ import functools
 
 from verta._internal_utils import connection
 
-from . import tracking
+from . import registry, tracking
 
 
 def new_entity(blocked_params=None):
@@ -40,3 +40,7 @@ class Client(object):
     @new_entity()
     def new_project(self, *args, **kwargs):
         return tracking.Project(*args, conn=self._conn, **kwargs)
+
+    @new_entity()
+    def new_registered_model(self, *args, **kwargs):
+        return registry.RegisteredModel(*args, conn=self._conn, **kwargs)
