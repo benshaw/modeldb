@@ -42,7 +42,7 @@ class LocalModelVersion(_bases._LocalArtifactEntity, _mixins.AttributesMixin):
 
         if self._msg.attributes:
             lines.append(
-                "attributes: {}".format(_utils.unravel_key_values(self._msg.attributes))
+                "attributes: {}".format(self.get_attributes())
             )
 
         if self._msg.artifacts:
