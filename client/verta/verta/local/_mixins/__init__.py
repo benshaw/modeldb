@@ -3,9 +3,10 @@
 from verta._internal_utils import documentation
 
 from ._attributes import AttributesMixin
+from ._tags import TagsMixin
 
 
 documentation.reassign_module(
-    [AttributesMixin],
+    [AttributesMixin, TagsMixin],
     module_name=__name__,
 )

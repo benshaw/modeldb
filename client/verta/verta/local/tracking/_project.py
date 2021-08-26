@@ -11,7 +11,7 @@ from verta.local import _bases, _mixins
 logger = logging.getLogger(__name__)
 
 
-class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin):
+class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
     def __init__(self, conn=None, workspace=None, name=None):
         super(LocalProject, self).__init__(conn=conn)
 
@@ -29,7 +29,12 @@ class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin):
 
         if self._msg.attributes:
             lines.append(
-                "attributes: {}".format(_utils.unravel_key_values(self._msg.attributes))
+                "attributes: {}".format(self.get_attributes())
+            )
+
+        if self._msg.tags:
+            lines.append(
+                "tags: {}".format(self.get_tags())
             )
 
         return "\n    ".join(lines)
@@ -49,6 +54,7 @@ class LocalProject(_bases._LocalEntity, _mixins.AttributesMixin):
         endpoint = "/api/v1/modeldb/project/createProject"
         body = ProjectService_pb2.CreateProject(
             name=self._msg.name,
+            tags=self._msg.tags,
             attributes=self._msg.attributes,
             workspace_name=self.workspace,
         )

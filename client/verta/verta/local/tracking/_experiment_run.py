@@ -16,7 +16,7 @@ from . import _experiment
 logger = logging.getLogger(__name__)
 
 
-class LocalExperimentRun(_bases._LocalArtifactEntity, _mixins.AttributesMixin):
+class LocalExperimentRun(_bases._LocalArtifactEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
     def __init__(self, conn=None, project_name=None, experiment_name=None, workspace=None, name=None):
         super(LocalExperimentRun, self).__init__(conn=conn)
 
@@ -48,7 +48,12 @@ class LocalExperimentRun(_bases._LocalArtifactEntity, _mixins.AttributesMixin):
 
         if self._msg.attributes:
             lines.append(
-                "attributes: {}".format(_utils.unravel_key_values(self._msg.attributes))
+                "attributes: {}".format(self.get_attributes())
+            )
+
+        if self._msg.tags:
+            lines.append(
+                "tags: {}".format(self.get_tags())
             )
 
         if self._msg.artifacts:
@@ -72,6 +77,7 @@ class LocalExperimentRun(_bases._LocalArtifactEntity, _mixins.AttributesMixin):
             project_id=self._msg.project_id,
             experiment_id=self._msg.experiment_id,
             name=self._msg.name,
+            tags=self._msg.tags,
             attributes=self._msg.attributes,
             artifacts=self._msg.artifacts,
         )

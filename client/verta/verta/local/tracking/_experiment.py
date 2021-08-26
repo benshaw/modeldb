@@ -13,7 +13,7 @@ from . import _project
 logger = logging.getLogger(__name__)
 
 
-class LocalExperiment(_bases._LocalEntity, _mixins.AttributesMixin):
+class LocalExperiment(_bases._LocalEntity, _mixins.AttributesMixin, _mixins.TagsMixin):
     def __init__(self, conn=None, project_name=None, workspace=None, name=None):
         super(LocalExperiment, self).__init__(conn=conn)
 
@@ -39,7 +39,12 @@ class LocalExperiment(_bases._LocalEntity, _mixins.AttributesMixin):
 
         if self._msg.attributes:
             lines.append(
-                "attributes: {}".format(_utils.unravel_key_values(self._msg.attributes))
+                "attributes: {}".format(self.get_attributes())
+            )
+
+        if self._msg.tags:
+            lines.append(
+                "tags: {}".format(self.get_tags())
             )
 
         return "\n    ".join(lines)
@@ -54,6 +59,7 @@ class LocalExperiment(_bases._LocalEntity, _mixins.AttributesMixin):
         body = ExperimentService_pb2.CreateExperiment(
             project_id=self._msg.project_id,
             name=self._msg.name,
+            tags=self._msg.tags,
             attributes=self._msg.attributes,
         )
         response = self._conn.make_proto_request("POST", endpoint, body=body)
