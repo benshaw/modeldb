@@ -18,8 +18,10 @@ class _LocalEntity(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        # TODO: flag to save even if exception
+        # TODO: flag to suppress exception while skipping save
         if all(arg is None for arg in [exc_type, exc_value, traceback]):
-            self.save()  # TODO: flag to save on exception
+            self.save()
 
     @abc.abstractmethod
     def __repr__(self):
