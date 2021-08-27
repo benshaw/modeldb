@@ -11,7 +11,11 @@ from . import _model_version
 logger = logging.getLogger(__name__)
 
 
-class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
+class LocalRegisteredModel(
+    _mixins.AttributesMixin,
+    _mixins.RegistryLabelsMixin,
+    _bases._LocalEntity,
+):
     def __init__(self, conn=None, workspace=None, name=None, id=None):
         if id and (set(locals().keys()) - {"conn", "id"}):
             raise ValueError("cannot provide other arguments alongside `id`")
@@ -41,6 +45,11 @@ class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
 
         if self.id:
             lines.append("id: {}".format(self.id))
+
+        if self._msg.labels:
+            lines.append(
+                "labels: {}".format(self.get_labels())
+            )
 
         if self._msg.attributes:
             lines.append(

@@ -15,7 +15,11 @@ from . import _registered_model
 logger = logging.getLogger(__name__)
 
 
-class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
+class LocalModelVersion(
+    _mixins.AttributesMixin,
+    _mixins.RegistryLabelsMixin,
+    _bases._LocalArtifactEntity,
+):
     def __init__(
         self,
         conn=None,
@@ -67,6 +71,11 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
 
         if self.id:
             lines.append("id: {}".format(self.id))
+
+        if self._msg.labels:
+            lines.append(
+                "labels: {}".format(self.get_labels())
+            )
 
         if self._msg.attributes:
             lines.append(
