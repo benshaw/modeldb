@@ -4,19 +4,34 @@ import logging
 
 from verta._protos.public.registry import RegistryService_pb2
 
-from verta._internal_utils import _utils
-from verta.local import _bases, _mixins
+from verta.local import _bases, _decorators, _mixins
+from . import _model_version
 
 
 logger = logging.getLogger(__name__)
 
 
 class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
-    def __init__(self, conn=None, workspace=None, name=None):
-        super(LocalRegisteredModel, self).__init__(conn=conn)
+    def __init__(self, conn=None, workspace=None, name=None, id=None):
+        if id and (set(locals().keys()) - {"conn", "id"}):
+            raise ValueError("cannot provide other arguments alongside `id`")
 
-        self._msg = RegistryService_pb2.RegisteredModel(name=name)
+        super(LocalRegisteredModel, self).__init__(conn=conn)
         self._workspace = workspace
+
+        if id:
+            self._msg = self._get_proto_by_id(self._conn, id)
+        else:
+            if name:
+                self._msg = self._get_proto_by_name(self._conn, name, workspace)
+        if self._msg:
+            logger.info(
+                'opened registered model "%s" in workspace "%s"',
+                self._msg.name,
+                self.workspace,
+            )
+        else:
+            self._msg = RegistryService_pb2.RegisteredModel(name=name)
 
     def __repr__(self):
         lines = [type(self).__name__]
@@ -33,6 +48,29 @@ class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
             )
 
         return "\n    ".join(lines)
+
+    @classmethod
+    def _get_proto_by_id(cls, conn, id):
+        endpoint = "/api/v1/registry/registered_models/{}".format(id)
+        response = conn.make_proto_request("GET", endpoint)
+
+        return conn.maybe_proto_response(
+            response,
+            RegistryService_pb2.GetRegisteredModelRequest.Response,
+        ).registered_model
+
+    @classmethod
+    def _get_proto_by_name(cls, conn, name, workspace=None):
+        endpoint = "/api/v1/registry/workspaces/{}/registered_models/{}".format(
+            workspace or conn.get_default_workspace(),
+            name,
+        )
+        response = conn.make_proto_request("GET", endpoint)
+
+        return conn.maybe_proto_response(
+            response,
+            RegistryService_pb2.GetRegisteredModelRequest.Response,
+        ).registered_model
 
     def _create(self):
         endpoint = "/api/v1/registry/workspaces/{}/registered_models".format(
@@ -74,3 +112,36 @@ class LocalRegisteredModel(_mixins.AttributesMixin, _bases._LocalEntity):
             return self._workspace
         else:
             return self._conn.get_default_workspace()
+
+    @_decorators.new_entity(blocked_params={"workspace"})
+    def new_version(self, *args, **kwargs):
+        return _model_version.LocalModelVersion(
+            *args,
+            conn=self._conn,
+            registered_model_name=self._msg.name,
+            workspace=self.workspace,
+            **kwargs
+        )
+
+    @_decorators.open_entity(blocked_params={"registered_model_name", "workspace"})
+    def open_version(self, *args, **kwargs):
+        # TODO: this whole method is a hack
+        if "id" in kwargs:
+            msg = _model_version.LocalModelVersion._get_proto_by_id(
+                self._conn,
+                kwargs["id"],
+            )
+        else:
+            msg = _model_version.LocalModelVersion._get_proto_by_name(
+                *args,
+                conn=self._conn,
+                **kwargs
+            )
+
+        if msg:
+            return _model_version.LocalModelVersion(
+                *args,
+                conn=self._conn,
+                **kwargs
+            )
+        raise ValueError("registered model not found")

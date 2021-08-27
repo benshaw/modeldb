@@ -2,9 +2,11 @@
 
 import logging
 
+from google.protobuf import struct_pb2
+from verta._protos.public.common import CommonService_pb2
 from verta._protos.public.registry import RegistryService_pb2
 
-from verta._internal_utils import _utils, artifact_manager
+from verta._internal_utils import artifact_manager
 from verta.local import _bases, _mixins
 
 from . import _registered_model
@@ -14,22 +16,48 @@ logger = logging.getLogger(__name__)
 
 
 class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
-    def __init__(self, conn=None, registered_model_name=None, workspace=None, version=None):
+    def __init__(
+        self,
+        conn=None,
+        registered_model_name=None,
+        workspace=None,
+        version=None,
+        id=None,
+    ):
+        if id and (set(locals().keys()) - {"conn", "id"}):
+            raise ValueError("cannot provide other arguments alongside `id`")
+
         super(LocalModelVersion, self).__init__(conn=conn)
 
-        if registered_model_name is None:
-            reg_model = _registered_model.LocalRegisteredModel(
-                conn=self._conn,
-                workspace=workspace,
-            )
-            reg_model.save()
+        if id:
+            self._msg = self._get_proto_by_id(self._conn, id)
         else:
-            raise NotImplementedError("TODO: fetch existing reg model")
+            if registered_model_name:
+                _reg_model = _registered_model.LocalRegisteredModel._get_proto_by_name(
+                    self._conn,
+                    registered_model_name,
+                    workspace,
+                )
+            else:
+                _reg_model = _registered_model.LocalRegisteredModel(
+                    conn=self._conn,
+                    workspace=workspace,
+                )
+                _reg_model.save()
+            reg_model_id = _reg_model.id
 
-        self._msg = RegistryService_pb2.ModelVersion(
-            registered_model_id=reg_model.id,
-            version=version,
-        )
+            if version:
+                self._msg = self._get_proto_by_name(self._conn, version, reg_model_id)
+        if self._msg:
+            logger.info(
+                'opened model version "%s"',
+                self._msg.version,
+            )
+        else:
+            self._msg = RegistryService_pb2.ModelVersion(
+                registered_model_id=reg_model_id,
+                version=version,
+            )
 
     def __repr__(self):
         lines = [type(self).__name__]
@@ -51,6 +79,38 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
             )
 
         return "\n    ".join(lines)
+
+    @classmethod
+    def _get_proto_by_id(cls, conn, id):
+        endpoint = "/api/v1/registry/model_versions/{}".format(id)
+        response = conn.make_proto_request("GET", endpoint)
+
+        return conn.maybe_proto_response(
+            response,
+            RegistryService_pb2.GetModelVersionRequest.Response,
+        ).model_version
+
+    @classmethod
+    def _get_proto_by_name(cls, conn, version, registered_model_id):
+        endpoint = "/api/v1/registry/registered_models/{}/model_versions/find".format(
+            registered_model_id
+        )
+        msg = RegistryService_pb2.FindModelVersionRequest(
+            predicates=[
+                CommonService_pb2.KeyValueQuery(
+                    key="version",
+                    value=struct_pb2.Value(string_value=version),
+                    operator=CommonService_pb2.OperatorEnum.EQ,
+                ),
+            ],
+        )
+        proto_response = conn.make_proto_request("POST", endpoint, body=msg)
+        response = conn.maybe_proto_response(proto_response, msg.Response)
+
+        if not response.model_versions:
+            return None
+        # should only have 1 entry here, as name/version is unique
+        return response.model_versions[0]
 
     def _create(self):
         endpoint = "/api/v1/registry/registered_models/{}/model_versions".format(
@@ -83,8 +143,11 @@ class LocalModelVersion(_mixins.AttributesMixin, _bases._LocalArtifactEntity):
 
     @property
     def workspace(self):
-        raise NotImplementedError("TODO: fetch existing reg model")
-        return reg_model.workspace
+        workspace_id = _registered_model.LocalRegisteredModel._get_proto_by_id(
+            self._conn,
+            self._msg.registered_model_id,
+        ).workspace_id
+        return self._conn.get_workspace_name_from_id(workspace_id)
 
     def _get_artifact_resolver(self, key):
         return _ModelVersionArtifactResolver(self._conn, self.id, key)

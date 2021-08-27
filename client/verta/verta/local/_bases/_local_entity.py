@@ -5,6 +5,7 @@ import abc
 from verta.external import six
 
 from verta._internal_utils import connection
+from verta.local import _decorators
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -22,6 +23,14 @@ class _LocalEntity(object):
 
     @abc.abstractmethod
     def __repr__(self):
+        raise NotImplementedError
+
+    @_decorators.abstractclassmethod
+    def _get_proto_by_id(cls, conn, id):
+        raise NotImplementedError
+
+    @_decorators.abstractclassmethod
+    def _get_proto_by_name(cls, conn, name, *args, **kwargs):
         raise NotImplementedError
 
     @abc.abstractmethod
