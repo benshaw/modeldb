@@ -153,6 +153,23 @@ class RegisteredModelVersion(_deployable_entity._DeployableEntity):
     #     self._refresh_cache()
     #     return self._msg.archived == _CommonCommonService.TernaryEnum.TRUE
 
+
+    #@property /todo ??
+    #/todo can a type be added for stage ?:
+    def update_stage(self, stage, comment):
+        self._refresh_cache()
+        #stageEnum = _StageService.StageEnum
+        request = _StageService.UpdateStageRequest(self.registered_model_id, stage, comment)
+        response = self._conn.make_proto_request(
+            method="POST",
+            path="/api/v1/registry/stage/updateStage",
+            body=request
+        )
+
+        return self._conn.must_proto_response(
+            response, _StageService.Activity.Response
+        )
+
     @property
     def workspace(self):
         self._refresh_cache()
