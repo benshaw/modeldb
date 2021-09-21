@@ -153,6 +153,10 @@ class RegisteredModelVersion(_deployable_entity._DeployableEntity):
     #     self._refresh_cache()
     #     return self._msg.archived == _CommonCommonService.TernaryEnum.TRUE
 
+    @property
+    def stage(self):
+        self._refresh_cache()
+        return _StageService.StageEnum.Stage.Name(self._msg.stage).lower()
 
     #@property /todo ??
     #/todo can a type be added for stage ?:
