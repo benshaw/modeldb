@@ -162,17 +162,19 @@ class RegisteredModelVersion(_deployable_entity._DeployableEntity):
     #/todo can a type be added for stage ?:
     def update_stage(self, stage, comment):
         self._refresh_cache()
-        #stageEnum = _StageService.StageEnum
-        request = _StageService.UpdateStageRequest(self.registered_model_id, stage, comment)
+        stageEnum = _StageService.StageEnum.Stage.Value(stage.upper())
+        request = _StageService.UpdateStageRequest(model_version_id=self.registered_model_id, stage=stageEnum, comment=comment)
+        print(request)
         response = self._conn.make_proto_request(
             method="POST",
             path="/api/v1/registry/stage/updateStage",
             body=request
         )
+        print(response)
 
-        return self._conn.must_proto_response(
-            response, _StageService.Activity.Response
-        )
+        #return self._conn.must_proto_response(
+         #   response, _StageService.Activity.Response
+        #)
 
     @property
     def workspace(self):
