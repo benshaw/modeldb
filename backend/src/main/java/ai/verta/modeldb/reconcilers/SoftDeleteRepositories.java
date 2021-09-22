@@ -23,7 +23,6 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import javax.persistence.OptimisticLockException;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.LockMode;
 import org.hibernate.LockOptions;
 import org.hibernate.Session;
@@ -31,7 +30,6 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 public class SoftDeleteRepositories extends Reconciler<String> {
-  private static final Logger LOGGER = LogManager.getLogger(SoftDeleteRepositories.class);
   private static final ModelDBHibernateUtil modelDBHibernateUtil =
       ModelDBHibernateUtil.getInstance();
   private final MDBRoleService mdbRoleService;
@@ -43,7 +41,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
       boolean isDataset,
       FutureJdbi futureJdbi,
       Executor executor) {
-    super(config, LOGGER, futureJdbi, executor, true);
+    super(config, LogManager.getLogger(SoftDeleteRepositories.class), futureJdbi, executor, true);
     this.mdbRoleService = mdbRoleService;
     this.isDataset = isDataset;
   }
@@ -66,14 +64,14 @@ public class SoftDeleteRepositories extends Reconciler<String> {
     try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
       var deletedQuery = session.createQuery(queryString);
       deletedQuery.setParameter("deleted", true);
-      deletedQuery.setMaxResults(config.maxSync);
+      deletedQuery.setMaxResults(config.getMaxSync());
       deletedQuery.stream().forEach(id -> this.insert(String.valueOf(id)));
     }
   }
 
   @Override
   protected ReconcileResult reconcile(Set<String> ids) {
-    LOGGER.debug("Reconciling repositories " + ids.toString());
+    logger.debug("Reconciling repositories " + ids.toString());
 
     if (isDataset) {
       mdbRoleService.deleteEntityResourcesWithServiceUser(
@@ -91,7 +89,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
   }
 
   private void deleteRepositories(Session session, Set<String> ids) {
-    LOGGER.trace("Repository deleting");
+    logger.trace("Repository deleting");
     var repositoriesQueryString =
         String.format("from %s where id in (:ids)", RepositoryEntity.class.getSimpleName());
 
@@ -112,11 +110,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
 
           transaction = session.beginTransaction();
 
-          var deleteTagsHql =
-              new StringBuilder("DELETE " + TagsEntity.class.getSimpleName() + " te where te.id.")
-                  .append(ModelDBConstants.REPOSITORY_ID)
-                  .append(" = :repoId ")
-                  .toString();
+          var deleteTagsHql = "DELETE TagsEntity te where te.id.repository_id = :repoId ";
           var deleteTagsQuery = session.createQuery(deleteTagsHql);
           deleteTagsQuery.setParameter("repoId", repository.getId());
           deleteTagsQuery.executeUpdate();
@@ -125,12 +119,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
               session, String.valueOf(repository.getId()), IDTypeEnum.IDType.VERSIONING_REPOSITORY);
 
           var getRepositoryBranchesHql =
-              new StringBuilder("From ")
-                  .append(BranchEntity.class.getSimpleName())
-                  .append(" br where br.id.")
-                  .append(ModelDBConstants.REPOSITORY_ID)
-                  .append(" = :repoId ")
-                  .toString();
+              "From BranchEntity br where br.id.repository_id = :repoId ";
           var query = session.createQuery(getRepositoryBranchesHql);
           query.setParameter("repoId", repository.getId());
           List<BranchEntity> branchEntities = query.list();
@@ -149,14 +138,9 @@ public class SoftDeleteRepositories extends Reconciler<String> {
             deleteBranchQuery.executeUpdate();
           }
 
-          var commitQueryBuilder =
-              new StringBuilder(
-                  "SELECT cm FROM "
-                      + CommitEntity.class.getSimpleName()
-                      + " cm LEFT JOIN cm.repository repo WHERE repo.id = :repoId ");
-          Query<CommitEntity> commitEntityQuery =
-              session.createQuery(
-                  commitQueryBuilder.append(" ORDER BY cm.date_created DESC").toString());
+          var commitQueryString =
+              "SELECT cm FROM CommitEntity cm LEFT JOIN cm.repository repo WHERE repo.id = :repoId ORDER BY cm.date_created DESC ";
+          Query<CommitEntity> commitEntityQuery = session.createQuery(commitQueryString);
           commitEntityQuery.setParameter("repoId", repository.getId());
           List<CommitEntity> commitEntities = commitEntityQuery.list();
 
@@ -191,33 +175,27 @@ public class SoftDeleteRepositories extends Reconciler<String> {
           session.delete(repository);
           transaction.commit();
         } catch (OptimisticLockException ex) {
-          LOGGER.error(
+          logger.error(
               "SoftDeleteRepositories : deleteRepositories : Exception: {}", ex.getMessage());
           if (transaction != null && transaction.getStatus().canRollback()) {
             transaction.rollback();
           }
         } catch (Exception ex) {
-          LOGGER.error("SoftDeleteRepositories : deleteRepositories : Exception: ", ex);
+          logger.error("SoftDeleteRepositories : deleteRepositories : Exception: ", ex);
           if (transaction != null && transaction.getStatus().canRollback()) {
             transaction.rollback();
           }
         }
       }
     }
-    LOGGER.trace(
+    logger.trace(
         "Repository Deleted successfully : Deleted repositories count {}",
         repositoryEntities.size());
   }
 
   public static void deleteLabels(Session session, Object entityHash, IDTypeEnum.IDType idType) {
     var deleteLabelsQueryString =
-        new StringBuilder("DELETE LabelsMappingEntity lm where lm.id.")
-            .append(ModelDBConstants.ENTITY_HASH)
-            .append(" = :entityHash ")
-            .append(" AND lm.id.")
-            .append(ModelDBConstants.ENTITY_TYPE)
-            .append(" = :entityType")
-            .toString();
+        "DELETE LabelsMappingEntity lm where lm.id.entity_hash = :entityHash AND lm.id.entity_type = :entityType";
     var deleteLabelsQuery =
         session
             .createQuery(deleteLabelsQueryString)
@@ -229,12 +207,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
 
   public static void deleteAttribute(Session session, String entityHash) {
     var deleteAllAttributes =
-        new StringBuilder("delete from AttributeEntity at WHERE at.")
-            .append(ModelDBConstants.ENTITY_HASH)
-            .append(" = :entityHash")
-            .append(" AND at.entity_name ")
-            .append(" = :entityName")
-            .toString();
+        "delete from AttributeEntity at WHERE at.entity_hash = :entityHash AND at.entity_name = :entityName";
     var deleteLabelsQuery =
         session
             .createQuery(deleteAllAttributes)
@@ -246,10 +219,7 @@ public class SoftDeleteRepositories extends Reconciler<String> {
 
   private static void deleteTagEntities(Session session, Long repoId, String commitHash) {
     String getTagsHql =
-        "From TagsEntity te where te.id."
-            + ModelDBConstants.REPOSITORY_ID
-            + " = :repoId "
-            + " AND te.commit_hash = :commitHash";
+        "From TagsEntity te where te.id.repository_id = :repoId AND te.commit_hash = :commitHash";
     Query<TagsEntity> getTagsQuery = session.createQuery(getTagsHql, TagsEntity.class);
     getTagsQuery.setParameter("repoId", repoId);
     getTagsQuery.setParameter("commitHash", commitHash);

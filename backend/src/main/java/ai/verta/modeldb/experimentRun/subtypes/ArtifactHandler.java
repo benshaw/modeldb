@@ -25,6 +25,7 @@ import org.hibernate.Session;
 
 public class ArtifactHandler extends ArtifactHandlerBase {
   private static Logger LOGGER = LogManager.getLogger(ArtifactHandler.class);
+  private static final String KEY_S_NOT_LOGGED_ERROR = "Key %s not logged";
 
   private final CodeVersionHandler codeVersionHandler;
   private final DatasetHandler datasetHandler;
@@ -123,7 +124,8 @@ public class ArtifactHandler extends ArtifactHandlerBase {
             maybeId -> {
               final var id =
                   maybeId.orElseThrow(
-                      () -> new InvalidArgumentException("Key " + key + " not logged"));
+                      () ->
+                          new InvalidArgumentException(String.format(KEY_S_NOT_LOGGED_ERROR, key)));
               try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
                 final var artifactEntity =
                     session.get(ArtifactEntity.class, id, LockMode.PESSIMISTIC_WRITE);
@@ -141,7 +143,7 @@ public class ArtifactHandler extends ArtifactHandlerBase {
       S3KeyFunction initializeMultipart) {
     String uploadId;
     if (partNumberSpecified
-        && mdbConfig.artifactStoreConfig.artifactStoreType.equals(ModelDBConstants.S3)) {
+        && mdbConfig.artifactStoreConfig.getArtifactStoreType().equals(ModelDBConstants.S3)) {
       uploadId = artifactEntity.getUploadId();
       String message = null;
       if (uploadId == null || artifactEntity.isUploadCompleted()) {
@@ -189,7 +191,7 @@ public class ArtifactHandler extends ArtifactHandlerBase {
                         artifacts -> {
                           if (artifacts.isEmpty()) {
                             throw new InvalidArgumentException(
-                                "Key " + request.getKey() + " not logged");
+                                String.format(KEY_S_NOT_LOGGED_ERROR, request.getKey()));
                           }
                           return new AbstractMap.SimpleEntry<>(
                               datasetVersionDAO.getUrlForDatasetVersion(
@@ -219,7 +221,8 @@ public class ArtifactHandler extends ArtifactHandlerBase {
               final var id =
                   maybeId.orElseThrow(
                       () ->
-                          new InvalidArgumentException("Key " + request.getKey() + " not logged"));
+                          new InvalidArgumentException(
+                              String.format(KEY_S_NOT_LOGGED_ERROR, request.getKey())));
               try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
                 final var artifactEntity =
                     session.get(ArtifactEntity.class, id, LockMode.PESSIMISTIC_WRITE);
@@ -241,7 +244,8 @@ public class ArtifactHandler extends ArtifactHandlerBase {
               final var id =
                   maybeId.orElseThrow(
                       () ->
-                          new InvalidArgumentException("Key " + request.getKey() + " not logged"));
+                          new InvalidArgumentException(
+                              String.format(KEY_S_NOT_LOGGED_ERROR, request.getKey())));
               try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
                 final var artifactEntity =
                     session.get(ArtifactEntity.class, id, LockMode.PESSIMISTIC_WRITE);
@@ -267,7 +271,8 @@ public class ArtifactHandler extends ArtifactHandlerBase {
               final var id =
                   maybeId.orElseThrow(
                       () ->
-                          new InvalidArgumentException("Key " + request.getKey() + " not logged"));
+                          new InvalidArgumentException(
+                              String.format(KEY_S_NOT_LOGGED_ERROR, request.getKey())));
               try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
                 final var artifactEntity =
                     session.get(ArtifactEntity.class, id, LockMode.PESSIMISTIC_WRITE);

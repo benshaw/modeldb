@@ -65,6 +65,8 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
   private static final ModelDBHibernateUtil modelDBHibernateUtil =
       ModelDBHibernateUtil.getInstance();
   private static final boolean OVERWRITE_VERSION_MAP = false;
+  private static final String FIELD_TYPE_QUERY_PARAM = "field_type";
+  private static final String REPO_IDS_QUERY_PARAM = "repoIds";
   private final MDBConfig mdbConfig;
   private static final long CACHE_SIZE = 1000;
   private static final int DURATION = 10;
@@ -75,112 +77,39 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
   private final BlobDAO blobDAO;
   private final MetadataDAO metadataDAO;
   private static final String CHECK_EXP_RUN_EXISTS_AT_INSERT_HQL =
-      new StringBuilder("Select count(*) From ExperimentRunEntity ere where ")
-          .append(" ere." + ModelDBConstants.NAME + " = :experimentRunName ")
-          .append(" AND ere." + ModelDBConstants.PROJECT_ID + " = :projectId ")
-          .append(" AND ere." + ModelDBConstants.EXPERIMENT_ID + " = :experimentId ")
-          .append(" AND ere." + ModelDBConstants.DELETED + " = false ")
-          .toString();
+      "Select count(*) From ExperimentRunEntity ere where ere.name = :experimentRunName AND ere.project_id = :projectId AND ere.experiment_id = :experimentId AND ere.deleted = false";
   private static final String CHECK_EXP_RUN_EXISTS_AT_UPDATE_HQL =
-      new StringBuilder("Select count(*) From ExperimentRunEntity ere where ")
-          .append(" ere." + ModelDBConstants.ID + " = :experimentRunId ")
-          .append(" AND ere." + ModelDBConstants.DELETED + " = false ")
-          .toString();
+      "Select count(*) From ExperimentRunEntity ere where ere.id = :experimentRunId AND ere.deleted = false";
   private static final String GET_EXP_RUN_BY_IDS_HQL =
-      "From ExperimentRunEntity exr where exr.id IN (:ids) AND exr."
-          + ModelDBConstants.DELETED
-          + " = false ";
+      "From ExperimentRunEntity exr where exr.id IN (:ids) AND exr.deleted = false ";
   private static final String DELETE_ALL_TAGS_HQL =
-      new StringBuilder("delete from TagsMapping tm WHERE tm.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId")
-          .toString();
+      "delete from TagsMapping tm WHERE tm.experimentRunEntity.id = :experimentRunId";
   private static final String DELETE_SELECTED_TAGS_HQL =
-      new StringBuilder("delete from TagsMapping tm WHERE tm.")
-          .append(ModelDBConstants.TAGS)
-          .append(" in (:tags) AND tm.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId")
-          .toString();
+      "delete from TagsMapping tm WHERE tm.tags in (:tags) AND tm.experimentRunEntity.id = :experimentRunId";
   private static final String DELETE_ALL_ARTIFACTS_HQL =
-      new StringBuilder("delete from ArtifactEntity ar WHERE ar.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId")
-          .toString();
+      "delete from ArtifactEntity ar WHERE ar.experimentRunEntity.id = :experimentRunId";
   private static final String DELETE_SELECTED_ARTIFACTS_HQL =
-      new StringBuilder("delete from ArtifactEntity ar WHERE ar.")
-          .append(ModelDBConstants.KEY)
-          .append(" in (:keys) AND ar.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId ")
-          .append(" AND ar.field_type = :field_type")
-          .toString();
+      "delete from ArtifactEntity ar WHERE ar.key in (:keys) AND ar.experimentRunEntity.id = :experimentRunId AND ar.field_type = :field_type";
   private static final String GET_EXP_RUN_ATTRIBUTE_BY_KEYS_HQL =
-      new StringBuilder("From AttributeEntity attr where attr.")
-          .append(ModelDBConstants.KEY)
-          .append(" in (:keys) AND attr.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId AND attr.field_type = :fieldType")
-          .toString();
+      "From AttributeEntity attr where attr.key in (:keys) AND attr.experimentRunEntity.id = :experimentRunId AND attr.field_type = :fieldType";
   private static final String DELETE_ALL_EXP_RUN_ATTRIBUTES_HQL =
-      new StringBuilder("delete from AttributeEntity attr WHERE attr.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId AND attr.field_type = :fieldType")
-          .toString();
+      "delete from AttributeEntity attr WHERE attr.experimentRunEntity.id = :experimentRunId AND attr.field_type = :fieldType";
   private static final String DELETE_SELECTED_EXP_RUN_ATTRIBUTES_HQL =
-      new StringBuilder("delete from AttributeEntity attr WHERE attr.")
-          .append(ModelDBConstants.KEY)
-          .append(" in (:keys) AND attr.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId AND attr.field_type = :fieldType")
-          .toString();
+      "delete from AttributeEntity attr WHERE attr.key in (:keys) AND attr.experimentRunEntity.id = :experimentRunId AND attr.field_type = :fieldType";
   private static final String GET_EXPERIMENT_RUN_BY_PROJECT_ID_HQL =
-      new StringBuilder()
-          .append("From ExperimentRunEntity ere where ere.")
-          .append(ModelDBConstants.PROJECT_ID)
-          .append(" IN (:projectIds) ")
-          .append(" AND ere." + ModelDBConstants.DELETED + " = false ")
-          .toString();
+      "From ExperimentRunEntity ere where ere.project_id IN (:projectIds) AND ere.deleted = false";
   private static final String GET_EXPERIMENT_RUN_BY_EXPERIMENT_ID_HQL =
-      new StringBuilder()
-          .append("From ExperimentRunEntity ere where ere.")
-          .append(ModelDBConstants.EXPERIMENT_ID)
-          .append(" IN (:experimentIds) ")
-          .append(" AND ere." + ModelDBConstants.DELETED + " = false ")
-          .toString();
+      "From ExperimentRunEntity ere where ere.experiment_id IN (:experimentIds) AND ere.deleted = false";
   private static final String DELETED_STATUS_EXPERIMENT_RUN_QUERY_STRING =
-      new StringBuilder("UPDATE ")
-          .append(ExperimentRunEntity.class.getSimpleName())
-          .append(" expr ")
-          .append("SET expr.")
-          .append(ModelDBConstants.DELETED)
-          .append(" = :deleted ")
-          .append(" WHERE expr.")
-          .append(ModelDBConstants.ID)
-          .append(" IN (:experimentRunIds)")
-          .toString();
+      "UPDATE ExperimentRunEntity expr SET expr.deleted = :deleted WHERE expr.id IN (:experimentRunIds)";
   private static final String DELETE_ALL_KEY_VALUES_HQL =
-      new StringBuilder("delete from KeyValueEntity kv WHERE kv.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId")
-          .append(" AND kv.field_type = :field_type")
-          .toString();
+      "delete from KeyValueEntity kv WHERE kv.experimentRunEntity.id = :experimentRunId AND kv.field_type = :field_type";
   private static final String DELETE_SELECTED_KEY_VALUES_HQL =
-      new StringBuilder("delete from KeyValueEntity kv WHERE kv.")
-          .append(ModelDBConstants.KEY)
-          .append(" in (:keys) AND kv.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId ")
-          .append(" AND kv.field_type = :field_type")
-          .toString();
+      "delete from KeyValueEntity kv WHERE kv.key in (:keys) AND kv.experimentRunEntity.id = :experimentRunId AND kv.field_type = :field_type";
   private static final String GET_ALL_OBSERVATIONS_HQL =
-      new StringBuilder("FROM ObservationEntity oe WHERE oe.experimentRunEntity.")
-          .append(ModelDBConstants.ID)
-          .append(" = :experimentRunId")
-          .append(" AND oe.field_type = :field_type")
-          .toString();
+      "FROM ObservationEntity oe WHERE oe.experimentRunEntity.id = :experimentRunId AND oe.field_type = :field_type";
 
-  private LoadingCache<String, ReadWriteLock> locks =
+  private final LoadingCache<String, ReadWriteLock> locks =
       CacheBuilder.newBuilder()
           .maximumSize(CACHE_SIZE)
           .expireAfterWrite(DURATION, TimeUnit.MINUTES)
@@ -191,6 +120,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
                 }
               });
 
+  @SuppressWarnings({"squid:S2222"})
   protected AutoCloseable acquireReadLock(String lockKey) throws ExecutionException {
     LOGGER.debug("acquireReadLock for key: {}", lockKey);
     ReadWriteLock lock = locks.get(lockKey);
@@ -199,6 +129,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
     return readLock::unlock;
   }
 
+  @SuppressWarnings({"squid:S2222"})
   protected AutoCloseable acquireWriteLock(String lockKey) throws ExecutionException {
     LOGGER.debug("acquireWriteLock for key: {}", lockKey);
     ReadWriteLock lock = locks.get(lockKey);
@@ -327,7 +258,8 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
       TrialUtils.validateMaxArtifactsForTrial(
           mdbConfig.trial, experimentRun.getArtifactsCount(), 0);
 
-      if (experimentRun.getDatasetsCount() > 0 && mdbConfig.populateConnectionsBasedOnPrivileges) {
+      if (experimentRun.getDatasetsCount() > 0
+          && mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
         experimentRun = checkDatasetVersionBasedOnPrivileges(experimentRun, true);
       }
 
@@ -559,7 +491,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
 
   private ExperimentRun populateFieldsBasedOnPrivileges(ExperimentRun experimentRun)
       throws ModelDBException {
-    if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+    if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
       if (experimentRun.getDatasetsCount() > 0) {
         experimentRun = checkDatasetVersionBasedOnPrivileges(experimentRun, false);
       }
@@ -998,7 +930,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
         }
       }
 
-      if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+      if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
         newDatasets = getPrivilegedDatasets(newDatasets, true);
       }
 
@@ -1096,7 +1028,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
             .setLockOptions(new LockOptions().setLockMode(LockMode.PESSIMISTIC_WRITE));
     query.setParameterList("keys", keys);
     query.setParameter(ModelDBConstants.EXPERIMENT_RUN_ID_STR, experimentRunId);
-    query.setParameter("field_type", fieldType);
+    query.setParameter(FIELD_TYPE_QUERY_PARAM, fieldType);
     query.executeUpdate();
   }
 
@@ -1491,7 +1423,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
         LOGGER.trace("Converted from Hibernate to proto");
 
         List<String> selfAllowedRepositoryIds = new ArrayList<>();
-        if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+        if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
           selfAllowedRepositoryIds =
               mdbRoleService.getSelfAllowedResources(
                   ModelDBServiceResourceTypes.REPOSITORY,
@@ -1541,7 +1473,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
               experimentRun = ExperimentRun.newBuilder().setId(experimentRun.getId()).build();
               experimentRuns.add(experimentRun);
             } else {
-              if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+              if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
                 if (experimentRun.getDatasetsCount() > 0) {
                   experimentRun =
                       filteredDatasetsBasedOnPrivileges(
@@ -1615,7 +1547,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
     var queryBuilder =
         "Select vme.experimentRunEntity.id, cb From ConfigBlobEntity cb INNER JOIN VersioningModeldbEntityMapping vme ON vme.blob_hash = cb.blob_hash WHERE cb.hyperparameter_type = :hyperparameterType AND vme.experimentRunEntity.id IN (:expRunIds) ";
 
-    if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+    if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
       if (selfAllowedRepositoryIds == null || selfAllowedRepositoryIds.isEmpty()) {
         return new HashMap<>();
       } else {
@@ -1626,9 +1558,9 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
     var query = session.createQuery(queryBuilder);
     query.setParameter("hyperparameterType", HYPERPARAMETER);
     query.setParameterList("expRunIds", expRunIds);
-    if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+    if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
       query.setParameterList(
-          "repoIds",
+          REPO_IDS_QUERY_PARAM,
           selfAllowedRepositoryIds.stream().map(Long::parseLong).collect(Collectors.toList()));
     }
 
@@ -1658,6 +1590,9 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
                   break;
                 case STRING_VALUE:
                   valueBuilder.setStringValue(valuesConfigBlob.getStringValue());
+                  break;
+                default:
+                  // Do nothing
                   break;
               }
               KeyValue hyperparameter =
@@ -1693,7 +1628,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
             + " LEFT JOIN PathDatasetComponentBlobEntity pdcb ON ncb.path_dataset_blob_hash = pdcb.id.path_dataset_blob_id "
             + " WHERE vme.versioning_blob_type = :versioningBlobType AND vme.experimentRunEntity.id IN (:expRunIds) ";
 
-    if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+    if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
       if (selfAllowedRepositoryIds == null || selfAllowedRepositoryIds.isEmpty()) {
         return new HashMap<>();
       } else {
@@ -1704,9 +1639,9 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
     var query = session.createQuery(queryBuilder);
     query.setParameter("versioningBlobType", Blob.ContentCase.CODE.getNumber());
     query.setParameterList("expRunIds", expRunIds);
-    if (mdbConfig.populateConnectionsBasedOnPrivileges) {
+    if (mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
       query.setParameterList(
-          "repoIds",
+          REPO_IDS_QUERY_PARAM,
           selfAllowedRepositoryIds.stream().map(Long::parseLong).collect(Collectors.toList()));
     }
 
@@ -2017,9 +1952,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
     try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
       var query =
           session.createQuery(
-              "Select exr.id, exr.project_id From ExperimentRunEntity exr where exr.id IN (:ids) AND exr."
-                  + ModelDBConstants.DELETED
-                  + " = false ");
+              "Select exr.id, exr.project_id From ExperimentRunEntity exr where exr.id IN (:ids) AND exr.deleted = false ");
       query.setParameterList("ids", experimentRunIds);
 
       @SuppressWarnings("unchecked")
@@ -2243,7 +2176,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
         session
             .createQuery(fetchAllExpRunLogVersionedInputsHqlBuilder.toString())
             .setLockOptions(new LockOptions().setLockMode(LockMode.PESSIMISTIC_WRITE));
-    query.setParameter("repoIds", repoIds);
+    query.setParameter(REPO_IDS_QUERY_PARAM, repoIds);
     query.executeUpdate();
     LOGGER.debug("ExperimentRun versioning deleted successfully");
   }
@@ -2257,7 +2190,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
         var experimentRun = experimentRunObj.getProtoObject();
         if (experimentRun.getVersionedInputs() != null
             && experimentRun.getVersionedInputs().getRepositoryId() != 0
-            && mdbConfig.populateConnectionsBasedOnPrivileges) {
+            && mdbConfig.isPopulateConnectionsBasedOnPrivileges()) {
           experimentRun =
               checkVersionInputBasedOnPrivileges(experimentRun, new HashSet<>(), new HashSet<>());
         }
@@ -2486,7 +2419,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
       S3KeyFunction initializeMultipart) {
     String uploadId;
     if (partNumberSpecified
-        && mdbConfig.artifactStoreConfig.artifactStoreType.equals(ModelDBConstants.S3)) {
+        && mdbConfig.artifactStoreConfig.getArtifactStoreType().equals(ModelDBConstants.S3)) {
       uploadId = artifactEntity.getUploadId();
       String message = null;
       if (uploadId == null || artifactEntity.isUploadCompleted()) {
@@ -2623,7 +2556,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
             .createQuery(DELETE_ALL_KEY_VALUES_HQL)
             .setLockOptions(new LockOptions().setLockMode(LockMode.PESSIMISTIC_WRITE));
     query.setParameter(ModelDBConstants.EXPERIMENT_RUN_ID_STR, experimentRunId);
-    query.setParameter("field_type", fieldType);
+    query.setParameter(FIELD_TYPE_QUERY_PARAM, fieldType);
     query.executeUpdate();
   }
 
@@ -2635,7 +2568,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
             .setLockOptions(new LockOptions().setLockMode(LockMode.PESSIMISTIC_WRITE));
     query.setParameterList("keys", keys);
     query.setParameter(ModelDBConstants.EXPERIMENT_RUN_ID_STR, experimentRunId);
-    query.setParameter("field_type", fieldType);
+    query.setParameter(FIELD_TYPE_QUERY_PARAM, fieldType);
     query.executeUpdate();
   }
 
@@ -2694,7 +2627,7 @@ public class ExperimentRunDAORdbImpl implements ExperimentRunDAO {
               .createQuery(GET_ALL_OBSERVATIONS_HQL)
               .setLockOptions(new LockOptions().setLockMode(LockMode.PESSIMISTIC_WRITE));
       query.setParameter(ModelDBConstants.EXPERIMENT_RUN_ID_STR, experimentRunId);
-      query.setParameter("field_type", ModelDBConstants.OBSERVATIONS);
+      query.setParameter(FIELD_TYPE_QUERY_PARAM, ModelDBConstants.OBSERVATIONS);
       List<ObservationEntity> observationEntities = query.list();
       List<ObservationEntity> removedObservationEntities = new ArrayList<>();
       if (deleteAll) {

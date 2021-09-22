@@ -18,6 +18,7 @@ import org.springframework.boot.SpringApplication;
 
 public class ServiceSet {
   private static final Logger LOGGER = LogManager.getLogger(App.class);
+  private static final String SCAN_PACKAGES = "scan.packages";
 
   public ArtifactStoreService artifactStoreService = null;
   public AuthService authService;
@@ -36,10 +37,10 @@ public class ServiceSet {
     set.app = App.getInstance();
     set.app.mdbConfig = mdbConfig;
 
-    if (mdbArtifactStoreConfig.enabled) {
+    if (mdbArtifactStoreConfig.isEnabled()) {
       set.artifactStoreService = initializeArtifactStore(mdbArtifactStoreConfig);
     } else {
-      System.getProperties().put("scan.packages", "dummyPackageName");
+      System.getProperties().put(SCAN_PACKAGES, "dummyPackageName");
       SpringApplication.run(App.class);
     }
 
@@ -51,49 +52,52 @@ public class ServiceSet {
     // ------------- Start Initialize Cloud storage base on configuration ------------------
     ArtifactStoreService artifactStoreService;
 
-    if (mdbArtifactStoreConfig.artifactEndpoint != null) {
+    if (mdbArtifactStoreConfig.getArtifactEndpoint() != null) {
       System.getProperties()
           .put(
               "artifactEndpoint.storeArtifact",
-              mdbArtifactStoreConfig.artifactEndpoint.storeArtifact);
-      System.getProperties()
-          .put("artifactEndpoint.getArtifact", mdbArtifactStoreConfig.artifactEndpoint.getArtifact);
-    }
-
-    if (mdbArtifactStoreConfig.NFS != null && mdbArtifactStoreConfig.NFS.artifactEndpoint != null) {
-      System.getProperties()
-          .put(
-              "artifactEndpoint.storeArtifact",
-              mdbArtifactStoreConfig.NFS.artifactEndpoint.storeArtifact);
+              mdbArtifactStoreConfig.getArtifactEndpoint().getStoreArtifact());
       System.getProperties()
           .put(
               "artifactEndpoint.getArtifact",
-              mdbArtifactStoreConfig.NFS.artifactEndpoint.getArtifact);
+              mdbArtifactStoreConfig.getArtifactEndpoint().getGetArtifact());
     }
 
-    switch (mdbArtifactStoreConfig.artifactStoreType) {
+    if (mdbArtifactStoreConfig.getNFS() != null
+        && mdbArtifactStoreConfig.getNFS().getArtifactEndpoint() != null) {
+      System.getProperties()
+          .put(
+              "artifactEndpoint.storeArtifact",
+              mdbArtifactStoreConfig.getNFS().getArtifactEndpoint().getStoreArtifact());
+      System.getProperties()
+          .put(
+              "artifactEndpoint.getArtifact",
+              mdbArtifactStoreConfig.getNFS().getArtifactEndpoint().getGetArtifact());
+    }
+
+    switch (mdbArtifactStoreConfig.getArtifactStoreType()) {
       case "S3":
-        if (!mdbArtifactStoreConfig.S3.s3presignedURLEnabled) {
+        if (!mdbArtifactStoreConfig.S3.getS3presignedURLEnabled()) {
           System.setProperty(
-              ModelDBConstants.CLOUD_BUCKET_NAME, mdbArtifactStoreConfig.S3.cloudBucketName);
+              ModelDBConstants.CLOUD_BUCKET_NAME, mdbArtifactStoreConfig.S3.getCloudBucketName());
           System.getProperties()
-              .put("scan.packages", "ai.verta.modeldb.artifactStore.storageservice.s3");
+              .put(SCAN_PACKAGES, "ai.verta.modeldb.artifactStore.storageservice.s3");
           SpringApplication.run(App.class);
           artifactStoreService = App.getInstance().applicationContext.getBean(S3Service.class);
         } else {
-          artifactStoreService = new S3Service(mdbArtifactStoreConfig.S3.cloudBucketName);
-          System.getProperties().put("scan.packages", "dummyPackageName");
+          artifactStoreService = new S3Service(mdbArtifactStoreConfig.S3.getCloudBucketName());
+          System.getProperties().put(SCAN_PACKAGES, "dummyPackageName");
           SpringApplication.run(App.class);
         }
         break;
       case "NFS":
-        String rootDir = mdbArtifactStoreConfig.NFS.nfsRootPath;
+        String rootDir = mdbArtifactStoreConfig.getNFS().getNfsRootPath();
         LOGGER.trace("NFS server root path {}", rootDir);
 
         System.getProperties().put("file.upload-dir", rootDir);
         System.getProperties()
-            .put("scan.packages", "ai.verta.modeldb.artifactStore.storageservice.nfs");
-        SpringApplication.run(App.class, new String[0]);
+            .put(SCAN_PACKAGES, "ai.verta.modeldb.artifactStore.storageservice.nfs");
+        SpringApplication.run(App.class);
 
         artifactStoreService = App.getInstance().applicationContext.getBean(NFSService.class);
         break;

@@ -15,11 +15,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hibernate.query.Query;
 
 public class SoftDeleteExperimentRuns extends Reconciler<String> {
-  private static final Logger LOGGER = LogManager.getLogger(SoftDeleteExperimentRuns.class);
   private static final ModelDBHibernateUtil modelDBHibernateUtil =
       ModelDBHibernateUtil.getInstance();
   private final MDBRoleService mdbRoleService;
@@ -29,7 +27,8 @@ public class SoftDeleteExperimentRuns extends Reconciler<String> {
       MDBRoleService mdbRoleService,
       FutureJdbi futureJdbi,
       Executor executor) {
-    super(config, LOGGER, futureJdbi, executor, false);
+    super(
+        config, LogManager.getLogger(SoftDeleteExperimentRuns.class), futureJdbi, executor, false);
     this.mdbRoleService = mdbRoleService;
   }
 
@@ -42,14 +41,14 @@ public class SoftDeleteExperimentRuns extends Reconciler<String> {
     try (var session = modelDBHibernateUtil.getSessionFactory().openSession()) {
       Query<String> deletedQuery = session.createQuery(queryString, String.class);
       deletedQuery.setParameter("deleted", true);
-      deletedQuery.setMaxResults(config.maxSync);
+      deletedQuery.setMaxResults(config.getMaxSync());
       deletedQuery.stream().forEach(id -> this.insert((String) id));
     }
   }
 
   @Override
   protected ReconcileResult reconcile(Set<String> ids) {
-    LOGGER.debug("Reconciling experiment runs " + ids.toString());
+    logger.debug("Reconciling experiment runs " + ids.toString());
 
     deleteRoleBindings(ids);
 
